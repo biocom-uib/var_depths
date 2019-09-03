@@ -1,0 +1,1 @@
+git+git://github.com/biocom-uib/biotrees@4d1b10540b7109e0ba90a4663b56f5a68915e95d#egg=biotrees
