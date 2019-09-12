@@ -1,0 +1,131 @@
+---
+title: "Minimum V value"
+output: html_document
+---
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align="center", echo=TRUE, warning=FALSE, message=FALSE,error=FALSE,cache=TRUE)
+library(knitr)
+library(printr) 
+```
+
+The following function `MinVar` takes as input *n*, the number of leaves, and its output is a list with three components:
+
+* **n**: the value of n
+
+* **Min_V**: the minimum V value on on the space $\mathcal{BT}\!_{n}$ of bifurcating rooted trees with n leaves
+
+*  **Multisets_of_depths**: a list with the vectors of multiplicities of the depths of the leaves of the trees with minimum V value in $\mathcal{BT}\!_{n}$, in increasing order of the depths from 1 to the maximum depth of the tree. If the function only finds one such minimum tree up to depth-equivalence (which  so far has been always the case), this list is simplified to a single vector and the object in the global list is then called  **Multiset_of_depths**
+
+This function gives an error when n is not a positive integer
+
+
+
+```{r}
+MinVar=function(n){
+if (n!=as.integer(n) | n<=0){
+  stop("No such tree exists")
+} else
+  {
+if (n==1){MinV=list(n=1,V=0,Multiset_of_depths=c(0))
+warning("In this case, the only leaf of the tree has depth 0")
+} else{
+m=floor(log2(n))
+k=n-2^m
+V0=2*k*(2^m-k)/n^2
+X=list(c(rep(0,m-1),2^m-k,2*k))
+# When k=0 or m<5 or m>2^m-30 we know Min_V=V0 and Multiset_of_depths=X,
+# therefore we only consider the remaining cases
+if (m>=5 & k>0 & k<=2^m-30){
+    #Possible values of the l's
+    lls=seq(from=5,to=m)
+    # For every possible length j>0 of the vector of l's
+    for (j in 1:length(lls)){
+    # Matrix aux with columns all vectors of l's of length j
+    aux=combn(lls,j)
+    # For every column of aux, i.e., for every vector of l's of length j
+    for (i in 1:dim(aux)[2]){
+    # ll:= current vector of l's
+    ll=aux[,i]
+    #Check whether we are in the first case
+    if (k<=2^m-sum(2^ll)+j & max(ll)<m){
+    V.temp=(2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+    if (V.temp<=V0){
+      if (V.temp<V0){
+     V0=V.temp
+     p1=2^m-k-sum(2^ll)+j
+     p0=n-p1-j
+     MD=c(rep(0,m-1),p1,p0)
+     MD[m+1-ll]=1
+     X=list(MD)
+    } else {
+        p1=2^m-k-sum(2^ll)+j
+      p0=n-p1-j
+      MD=c(rep(0,m-1),p1,p0)
+      MD[m+1-ll]=1
+      X=c(X,MD)
+    } 
+    }
+    } else 
+      #Check whether we are in the second case
+      {
+           if (k>2^m-sum(2^(ll-1))+j){  
+        V.temp=(3*2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (3*2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+        # If the new V is smaller than the minimum previous one
+        if (V.temp<=V0){
+          if (V.temp<V0){
+            V0=V.temp
+          p1=3*2^m-k-sum(2^ll)+j
+          p0=n-p1-j
+          MD=c(rep(0,m),p1,p0)
+          MD[m+2-ll]=1
+          X=list(MD)
+        } else {
+          p1=3*2^m-k-sum(2^ll)+j
+          p0=n-p1-j
+          MD=c(rep(0,m),p1,p0)
+          MD[m+2-ll]=1
+          X=c(X,MD)
+        }   
+        }
+      }
+    }
+    }
+    }
+  }
+}
+# If the minimum is unique, we reduce the depth of the resulting list
+if (length(X)==1){
+MinV=list(n=n,Min_V=V0,Multiset_of_depths=X[[1]])
+} else {
+  MinV=list(n=n,Min_V=V0,Multisets_of_depths=X)
+}
+MinV
+}
+}
+```
+
+So, for instance, entering
+```{r}
+MinVar(183)
+```
+```{r,include=FALSE}
+MV183=MinVar(183)
+V183=MV183[[2]]
+DD183=MV183[[3]]
+D=length(DD183)
+```
+we obtain that the minimum value of V on $\mathcal{BT}\!_{183}$ is `r round(V183, 5)` and it is achieved on the trees with `r DD183[D-1]` leaves of depth `r D-1` and `r DD183[D]` leaves of depth `r D`: all these trees are depth-equivalent to the maximally balanced tree $B_{183}$
+
+In a similar way, entering
+```{r}
+MinVar(184)
+```
+```{r,include=FALSE}
+MV184=MinVar(184)
+V184=MV184[[2]]
+DD184=MV184[[3]]
+D=length(DD184)
+```
+we obtain that the minimum value of V on $\mathcal{BT}\!_{184}$ is `r round(V184, 5)` and it is achieved on the trees with a single leaf of depth `r min(which(DD184!=0))`,  `r DD184[D-1]` leaves of depth `r D-1` and `r DD184[D]` leaves of depth `r D`. These trees are of type $T_{184;6}$ and hence they are not depth-equivalent to the maximally balanced tree $B_{184}$. Actually, the value of $V(B_{184})$ is
+`r n=184; m=floor(log2(n)); k=n-2^m; round(2*k*(2^m-k)/n^2,5)`.
+

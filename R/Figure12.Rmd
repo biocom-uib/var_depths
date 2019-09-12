@@ -1,0 +1,90 @@
+---
+title: "Figure 12 in the manuscript"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align="center", echo=TRUE, warning=FALSE, message=FALSE,error=FALSE,cache=TRUE)
+library(knitr)
+library(printr)
+library(foreach)
+library(doParallel)
+```
+
+The following function `RHS` takes as input a positive integer $m>1$ and outputs a data frame with variables
+
+* **m**: the value of $m$
+* **k**: the first value of $k$ such that the minimum $V$ value on $\mathcal{Bt}\!_n$, with $m=\log_2(n)$ and $k=n-2^m$, does not correspond to maximally balanced trees, minus 1
+
+For simplicity, it assumes that the user enters as *m* a positive integer, it does not check whether this is the case or not.
+
+```{r}
+RHS=function(m){
+k=0
+V0=2*k*(2^m-k)/(2^m+k)^2
+while (V0==2*k*(2^m-k)/(2^m+k)^2 & k<2^m-30){
+  k=k+1
+  n=2^m+k
+  V0=2*k*(2^m-k)/(2^m+k)^2
+  lls=seq(from=5,to=m)
+  j=0
+  while (V0==2*k*(2^m-k)/(2^m+k)^2 & j<length(lls)){
+    j=j+1  
+    aux=combn(lls,j)
+    i=0
+    while (V0==2*k*(2^m-k)/(2^m+k)^2 & i<dim(aux)[2]){
+      i=i+1
+      ll=aux[,i]
+      if (k<=2^m-sum(2^ll)+j & max(ll)<m){
+        V.temp=(2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+            if (V.temp<V0){
+              V0=V.temp
+            } 
+        } else 
+        {
+          if (k>2^m-sum(2^(ll-1))+j){  
+            V.temp=(3*2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (3*2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+              if (V.temp<V0){
+                V0=V.temp
+                } 
+            }
+          }
+        }
+      }
+    }
+data.frame(m=m,k=k-1)
+}
+```
+
+Now we apply this function for n from 9 to 23:
+
+```{r}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results= foreach (i=9:23, .combine='rbind') %dopar% {
+  RHS(i)
+}
+```
+
+```{r}
+Results
+```
+
+
+The regression line of $\log(k_m)$ in terms of $\log(m)$ and the corresponding determination coefficient are
+```{r}
+lm(log(Results$k)~log(Results$m))
+summary(lm(log(Results$k)~log(Results$m)))$r.squared
+```
+
+
+
+Finally, the log-log plot of the points $(m,k_m)$ together with the function corresponding to this best fit:
+
+```{r, fig.width=5, fig.height=5}
+LMC=lm(log(Results$k)~log(Results$m))$coefficients
+plot(Results,pch=20,cex=0.7,xlab="n",ylab=expression(k[m]))
+curve(exp(LMC[1])*x^LMC[2],add=TRUE,col="red",cex=0.7)
+```
+
+

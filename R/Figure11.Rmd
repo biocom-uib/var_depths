@@ -1,0 +1,85 @@
+---
+title: "Figure 11 in the manuscript"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align="center", echo=TRUE, warning=FALSE, message=FALSE,error=FALSE,cache=TRUE)
+library(knitr)
+library(printr) 
+library(foreach)
+library(doParallel)
+```
+
+The following function `MV` takes as input *n*, the number of leaves, and it outputs a data frame with variables
+
+* **n**: the value of n
+* **B**: logical, is equal to TRUE if the minimum value of V on $\mathcal{BT}\!_n$ is achieved at the maximally balanced tree $B_n$ and FALSE otherwise
+* **Min.V**: the minimum value of  V on $\mathcal{BT}\!_n$
+
+For simplicity, it assumes that the user enters as *n* a positive integer, it does not check whether this is the case or not.
+
+```{r}
+MV=function(n){
+  X0=TRUE
+  m=floor(log2(n))
+  k=n-2^m
+  V0=2*k*(2^m-k)/n^2
+  X=list(c(rep(0,m-1),2^m-k,2*k))
+  if (m>=5 & k>0 & k<=2^m-30){
+    lls=seq(from=5,to=m)
+    for (j in 1:length(lls)){
+      aux=combn(lls,j)
+      for (i in 1:dim(aux)[2]){
+        ll=aux[,i]
+        if (k<=2^m-sum(2^ll)+j & max(ll)<m){
+          V.temp=(2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+            if (V.temp<V0){
+              V0=V.temp
+              X0=FALSE
+            } 
+        } else 
+          #Check whether we are in the second case
+        {
+          if (k>2^m-sum(2^(ll-1))+j){  
+            V.temp=(3*2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (3*2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+              if (V.temp<V0){
+                V0=V.temp
+                X0=FALSE} 
+            }
+          }
+        }
+      }
+    }
+data.frame(n=n,B=X0,Min.V=V0)
+}
+```
+
+Now we apply this function for n from 2^7^ (recall that for n under 2^7^ the minimum of V is always achieved at the maximally balanced trees) to 2^15^ and we plot the results. The red dots correspond to values of *n* where the minimum of V is achieved at $B_n$.
+
+```{r}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results= foreach (i=(2^7):(2^15), .combine = 'rbind') %dopar% {
+  MV(i)
+}
+```
+
+
+
+```{r, fig.width=10, fig.height=5}
+plot(Results$n,Results$Min.V,pch=20,cex=0.1,col=as.integer(Results$B)+1,xlab="n",ylab="Minimum V value")
+```
+
+The same plot, replacing the minimum V values by the minimum W:=n·V values
+
+```{r, fig.width=10, fig.height=5}
+plot(Results$n,Results$n*Results$Min.V,pch=20,cex=0.1,col=as.integer(Results$B)+1,xlab="n",ylab="Minimum W value")
+```
+
+And the same plot, replacing the minimum V values by the minimum n·W=n^2^·V values, which are integers
+
+
+```{r, fig.width=10, fig.height=5}
+plot(Results$n,(Results$n)^2*Results$Min.V,pch=20,cex=0.1,col=as.integer(Results$B)+1,xlab="n",ylab="Minimum nW value")
+```
