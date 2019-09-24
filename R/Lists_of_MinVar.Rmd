@@ -1,0 +1,213 @@
+---
+title: "Minimum V value"
+output: html_document
+---
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align="center", echo=TRUE, warning=FALSE, message=FALSE,error=FALSE,cache=TRUE)
+library(knitr)
+library(printr) 
+library(foreach)
+library(doParallel)
+```
+
+This file assumes that the minimum $V$ value in $\mathcal{BT}_n$ is always achieved at only one type of trees, which is what we have obtained in simulations. This allows us to give the results in a more compact form. 
+
+The following function `MinVar2`, adapted from `MinVar`, takes as input *n*, the number of leaves, and its output is a vector of length $m+3$ (with $m=\lfloor \log_2(n)\rfloor$) with the following components:
+
+* **n**: the value of n
+
+* **Min_V**: the minimum V value on on the space $\mathcal{BT}\!_{n}$ of bifurcating rooted trees with n leaves
+
+* The sequence $d_1,\ldots,d_{m+1}$ (with $m=\lfloor \log_2(n)\rfloor$) with each $d_i$ the number of leaves of depth $i$ in the type of trees giving the minimum $V$ value in $\mathcal{BT}_n$. 
+
+
+Since it is intended to be applied on intervals of integer numbers $2^m\leq n<2^{m+1}$ with $m\geq 2$, it assumes for simplicity that the user enters as *n* a positive integer $n\geq 2$, it does not check whether this is the case or not.
+
+
+```{r}
+MinVar2=function(n){
+m=floor(log2(n))
+k=n-2^m
+V0=2*k*(2^m-k)/n^2
+X=c(rep(0,m-1),2^m-k,2*k,0)
+# When k=0 or m<5 or m>2^m-30 we know Min_V=V0 and Multiset_of_depths=X,
+# therefore we only consider the remaining cases
+if (m>=5 & k>0 & k<=2^m-30){
+    #Possible values of the l's
+    lls=seq(from=5,to=m)
+    # For every possible length j>0 of the vector of l's
+    for (j in 1:length(lls)){
+    # Matrix aux with columns all vectors of l's of length j
+    aux=combn(lls,j)
+    # For every column of aux, i.e., for every vector of l's of length j
+    for (i in 1:dim(aux)[2]){
+    # ll:= current vector of l's
+    ll=aux[,i]
+    #Check whether we are in the first case
+    if (k<=2^m-sum(2^ll)+j & max(ll)<m){
+    V.temp=(2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+      if (V.temp<V0){
+     V0=V.temp
+     p1=2^m-k-sum(2^ll)+j
+     p0=n-p1-j
+     MD=c(rep(0,m-1),p1,p0,0)
+     MD[m+1-ll]=1
+     X=MD
+    } 
+    } else 
+      #Check whether we are in the second case
+      {
+           if (k>2^m-sum(2^(ll-1))+j){  
+        V.temp=(3*2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (3*2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+        # If the new V is smaller than the minimum previous one
+          if (V.temp<V0){
+            V0=V.temp
+          p1=3*2^m-k-sum(2^ll)+j
+          p0=n-p1-j
+          MD=c(rep(0,m),p1,p0)
+          MD[m+2-ll]=1
+          X=MD
+        }  
+        }
+      }
+    }
+    }
+  }
+MinV=c(n=n,Min_V=V0,X)
+}
+```
+
+
+Now
+```{r}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results8_9= foreach (n=(2^8):(2^9-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+```
+
+```{r,eval=FALSE}
+colnames(Results8_9)=c("n","Min_V",paste("d",1:10,sep=""))
+Results8_9
+write.table(Results8_9,"Results8_9.txt",row.names=FALSE,col.names=)
+```
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results9_10= foreach (n=(2^9):(2^10-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results9_10)=c("n","Min_V",paste("d",1:11,sep=""))
+write.table(Results9_10,"Results9_10.txt",row.names=FALSE,col.names=)
+```
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results10_11= foreach (n=(2^10):(2^11-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results10_11)=c("n","Min_V",paste("d",1:12,sep=""))
+write.table(Results10_11,"Results10_11.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results11_12= foreach (n=(2^11):(2^12-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results11_12)=c("n","Min_V",paste("d",1:13,sep=""))
+write.table(Results11_12,"Results11_12.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results12_13= foreach (n=(2^12):(2^13-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results12_13)=c("n","Min_V",paste("d",1:14,sep=""))
+write.table(Results12_13,"Results12_13.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results13_14= foreach (n=(2^13):(2^14-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results13_14)=c("n","Min_V",paste("d",1:15,sep=""))
+write.table(Results13_14,"Results13_14.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results14_15= foreach (n=(2^14):(2^15-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results14_15)=c("n","Min_V",paste("d",1:16,sep=""))
+write.table(Results14_15,"Results14_15.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results15_16= foreach (n=(2^15):(2^16-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results15_16)=c("n","Min_V",paste("d",1:17,sep=""))
+write.table(Results15_16,"Results15_16.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results16_17= foreach (n=(2^16):(2^17-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results16_17)=c("n","Min_V",paste("d",1:18,sep=""))
+write.table(Results16_17,"Results16_17.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results17_18= foreach (n=(2^17):(2^18-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results17_18)=c("n","Min_V",paste("d",1:19,sep=""))
+write.table(Results17_18,"Results17_18.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r,eval=FALSE}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results18_19= foreach (n=(2^18):(2^19-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results18_19)=c("n","Min_V",paste("d",1:20,sep=""))
+write.table(Results18_19,"Results18_19.txt",row.names=FALSE,col.names=)
+```
+
+
+```{r}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results19_20= foreach (n=(2^19):(2^20-1), .combine='rbind') %dopar% {
+  MinVar2(n)
+}
+colnames(Results19_20)=c("n","Min_V",paste("d",1:21,sep=""))
+write.table(Results19_20,"Results19_20.txt",row.names=FALSE,col.names=)
+```

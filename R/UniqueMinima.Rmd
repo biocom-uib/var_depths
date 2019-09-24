@@ -1,0 +1,123 @@
+---
+title: "Checking the uniqueness of minima"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.align="center", echo=TRUE, warning=FALSE, message=FALSE,error=FALSE,cache=TRUE)
+library(knitr)
+library(foreach)
+library(doParallel)
+```
+
+The following function `HMM` takes as input a positive integer $n>1$ and outputs the number of types of trees with $n$ leaves achieving the minimum $V$ value in $\mathcal{BT}\!_n$. So, a tie in this minimum value is produced when the result is larger than 1. Notice that it compares the values of $n^2\cdot V(T)$, which are natural numbers.
+
+
+For simplicity, it assumes that the user enters as *n* a positive integer, it does not check whether this is the case or not.
+
+```{r}
+HMM=function(n){
+if (n==1){
+  H0=0
+  X=list(c(0))
+} else{
+m=floor(log2(n))
+k=n-2^m
+H0=2*k*(2^m-k) 
+X=list(c(rep(0,m-1),2^m-k,2*k))
+if (m>=5 & k>0 & k<=2^m-30){
+    #Possible values of the l's
+    lls=seq(from=5,to=m)
+    # For every possible length j>0 of the vector of l's
+    for (j in 1:length(lls)){
+    # Matrix aux with columns all vectors of l's of length j
+    aux=combn(lls,j)
+    # For every column of aux, i.e., for every vector of l's of length j
+    for (i in 1:dim(aux)[2]){
+    # ll:= current vector of l's
+    ll=aux[,i]
+    #Check whether we are in the first case
+    if (k<=2^m-sum(2^ll)+j & max(ll)<m){
+    H.temp=n*(2^m-k-sum(2^ll)+sum(ll^2)+j)/n- (2^m-k-sum(2^ll)+sum(ll)+j)^2
+    if (H.temp<=H0){
+      if (H.temp<H0){
+     H0=H.temp
+     p1=2^m-k-sum(2^ll)+j
+     p0=n-p1-j
+     MD=c(rep(0,m-1),p1,p0)
+     MD[m+1-ll]=1
+     X=list(MD)
+    } else {
+        p1=2^m-k-sum(2^ll)+j
+      p0=n-p1-j
+      MD=c(rep(0,m-1),p1,p0)
+      MD[m+1-ll]=1
+      X=c(X,MD)
+    } 
+    }
+    } else 
+      #Check whether we are in the second case
+      {
+           if (k>2^m-sum(2^(ll-1))+j){  
+        H.temp=n*(3*2^m-k-sum(2^ll)+sum(ll^2)+j)- (3*2^m-k-sum(2^ll)+sum(ll)+j)^2/n^2
+        # If the new H is smaller than the minimum previous one
+        if (H.temp<=H0){
+          if (H.temp<H0){
+            H0=H.temp
+          p1=3*2^m-k-sum(2^ll)+j
+          p0=n-p1-j
+          MD=c(rep(0,m),p1,p0)
+          MD[m+2-ll]=1
+          X=list(MD)
+        } else {
+          p1=3*2^m-k-sum(2^ll)+j
+          p0=n-p1-j
+          MD=c(rep(0,m),p1,p0)
+          MD[m+2-ll]=1
+          X=c(X,MD)
+        }   
+        }
+      }
+    }
+    }
+    }
+  }
+}
+length(X)
+}
+```
+
+The following function applied to a positive integer $n$ outputs $n$ if the minimum $V$ value in $\mathcal{BT}\!_n$ is achieved at more than one  type of trees.
+
+```{r}
+Tie=function(n){
+Result=NULL
+if (HMM(n)>1){Result=n
+}
+Result
+}
+```
+
+
+
+
+Now we apply this function for n from 2 to 2^20^. The vector `Results` will contain
+all values of $n$ for which the minimum $V$ value in $\mathcal{BT}\!_n$ is achieved at more than one  type of trees.
+
+
+```{r}
+cl <- parallel::makeCluster(4)
+doParallel::registerDoParallel(cl)
+Results= foreach (i=2:(2^20), .combine='c') %dopar% {
+  Tie(i)
+}
+```
+
+
+
+
+```{r}
+Results
+```
+
+
