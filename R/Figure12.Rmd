@@ -56,12 +56,12 @@ data.frame(m=m,k=k-1)
 }
 ```
 
-Now we apply this function for n from 9 to 23:
+Now we apply this function for n from 9 to 25:
 
 ```{r}
 cl <- parallel::makeCluster(4)
 doParallel::registerDoParallel(cl)
-Results= foreach (i=9:23, .combine='rbind') %dopar% {
+Results= foreach (i=9:25, .combine='rbind') %dopar% {
   RHS(i)
 }
 ```
