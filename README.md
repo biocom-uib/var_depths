@@ -17,7 +17,7 @@ It contains the following *R Mardown* files:
 It also contains the HTML files obtained knitting them.
 
 ### Python folder
-- var_depths.py Python script defining the function 
+- var_depths.py Python script defining the functions
 * `var_depths`: that computes the variance of the leaves' depths of a given tree
 * `max_var_depths`: that returns the tuple formed by the maximum variance of a given number of leaves and the only tree that attains it
 * `min_var_depths`: that returns the tuple formed by the minimum variance of a given number of leaves and ONE tree that attains it
