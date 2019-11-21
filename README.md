@@ -22,3 +22,11 @@ Python script defining the functions
 * `max_var_depths`: that returns the tuple formed by the maximum variance of a given number of leaves and the only tree that attains it
 * `min_var_depths`: that returns the tuple formed by the minimum variance of a given number of leaves and ONE tree that attains it
 * `min_var_depths_vector`: that returns the tuple formed by the minimal variance of a given number of leaves and the vector of l_i's  
+
+### Tables folder
+
+It contains the types of trees with minimum V value for n from 2^8^ to 2^20^. Each file *Resultsk_k+1.txt* contains the results from 2^k^to 2^k+1^. The last file, from 2^19^ to 2^20^, is split into two files.
+
+### Table 3 folder
+
+It contains the R Markdown file and the files used in the computations yielding Table 3 in the main text
