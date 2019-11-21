@@ -1,6 +1,5 @@
 # var_depths
-Variance of leaves' depths related algorithms. Scripts associated to the paper "On the variance of the leaves' depths
-in a rooted tree I: Extremal values".
+Scripts and data associated to the paper  "On Sackin's original proposal: The variance of the leaves' depths as a phylogenetic balance index".
 
 ## Contents
 
