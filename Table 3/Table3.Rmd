@@ -1,0 +1,224 @@
+---
+title: 'Verifications'
+output: html_document
+---
+--- 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr) 
+```
+
+The functions used below need the following R packages to be installed and loaded:
+
+```{r, results='hide',warning=FALSE,message=FALSE}
+library(ape)
+library(igraph)
+library(CollessLike)
+```
+
+The following function computes the index $V$ of a tree; it will be added to the *CollessLike* package.
+
+```{r}
+V.index<-
+  function(tree){  
+    if(class(tree)=="character") 
+      tree=read.tree(text = tree)
+    if (class(tree)=="phylo") 
+      tree=graph.edgelist(tree$edge, directed=TRUE)  
+    if(class(tree)!="igraph")
+      stop("Not an igraph object. Please introduce a newick string, an ape tree or an igraph tree.")
+    root.node = which(degree(tree,mode="in")==0) 
+    deg.out = degree(tree,mode="out") 
+    if(deg.out[root.node]==1){ #exists a root-edge
+      tree = delete.vertices(tree,root.node) 
+      deg.out = degree(tree,mode="out") 
+      root.node = which(degree(tree,mode="in")==0)
+    } 
+    leaves = which(deg.out==0)
+    root.list = get.shortest.paths(tree,root.node)$vpath
+    # SACKIN #
+    depths = unlist(lapply(root.list,function(xx){length(xx)-1}))
+    N = length(leaves)
+    VV=var(depths[leaves])*(N-1)/N  
+    return(VV)
+  }
+```
+
+
+
+Moreover, the following functions are used in some computations:
+```{r} 
+DF=function(n){2^(2*n-2)/choose(2*n-2,n-1)} #(2n-2)!!/(2n-3)!!
+HH=function(n){sum(1/(1:n))} #Harmonic number H_n
+var.n = function (vec) 
+        return(var(vec)*(length(vec)-1)/length(vec))  # True variance
+```
+
+# List of all binary trees
+
+We have obtained al phylogenetic trees in $\mathcal{BT}_n$ for $n=3,\ldots,8$ using the *Python* package *phylonetwork*:
+
+```{python, python.reticulate=FALSE,eval=FALSE}
+import phylonetwork.generators as gen
+for n in range(3,8):
+    taxa = [str(i+1) for i in range(n)]
+    tg = gen.all_trees(taxa = taxa, binary = True, nested_taxa = False)
+    trees = list(tg)
+    newicks = []
+    file = open("bintrees_n"+str(n)+".txt", "w+")
+    for i in range(len(trees)):
+        newicks.append(trees[i].eNewick())
+        print >>file, newicks[i]
+    file.close()
+```
+
+The resulting lists of trees are available in this document's folder.
+
+
+# Exact computation of $E_Y(V_n)$  for n=3,...,8
+
+We shall compute the values of $E_Y(V_n)$, for $n=3,\ldots,8$, from the $V$-values of all trees in the corresponding $\mathcal{BT}_n$. To do that, on the one hand, we compute the probability of each tree in each $\mathcal{BT}_n$ under the Yule model with the following function: 
+```{r}
+yule.prob = function(tree){
+  if (class(tree)=="phylo") 
+    tree=graph.edgelist(tree$edge, directed=TRUE)  
+  sp = shortest.paths(tree,mode = "out")
+  deg = degree(tree,mode="out")
+  leaves = which(deg==0)
+  n = length(leaves) 
+  k.node = function(node){
+    subtree=which(sp[node,]<Inf)
+    return(length(intersect(leaves,subtree)))
+  } 
+  kappas = sapply(which(deg>0), k.node) 
+  value = (2^(n-1)/factorial(n))*
+              prod(1/(kappas-1))
+  return(value)
+} 
+```
+
+Then, we compute the $V$-value of each tree with the function `V.index` and, finally, we compute the desired expected value for each
+$n$ as the sum over all phylogenetic trees in $\mathcal{BT}_n$ of the product of their $V$-value and their probability:
+
+```{r}
+exp.V.yule = c(0,0)
+for(n in 3:8){ 
+  trees=read.tree(file=paste("./bintrees_n",n,".txt",sep=""))
+  indices = sapply(trees, V.index)
+  probs=sapply(trees, yule.prob)
+  exp.V.yule[n]=sum(indices*probs)
+} 
+exp.V.yule
+```
+
+
+The results agree with those given by our formula:
+```{r}
+EVY=function(n){2*(n+1)/n*HH(n)+1/n-5}
+sapply(1:8,FUN=EVY)
+```
+
+
+# Exact computation of $E_U(V_n)$  for n=3,...,8
+
+We compute the value of $E_U(V_n)$, for each $n=3,\ldots,8$, as the mean of the $V$-values of all trees in the corresponding $\mathcal{BT}_n$:
+
+```{r}
+exp.V.uni = c(0,0)
+for(n in 3:8){ 
+  trees=read.tree(file=paste("./bintrees_n",n,".txt",sep=""))
+  indices = sapply(trees, V.index) 
+  exp.V.uni[n]=mean(indices)
+} 
+exp.V.uni
+```
+
+
+The results agree with those given by our formula:
+```{r}
+EVU=function(n){(2*n-1)*(n-1)/(3*n)-(n-1)/(2*n)*DF(n)}
+sapply(1:8,FUN=EVU)
+```
+
+
+
+## Exact computation of $\sigma^2_U(S_n)$ for n=3,...,8
+
+We compute the value of each $\sigma_U(S_n)$, for $n=3,\ldots,8$, as the (true) variance of the Sackin indices of all trees in the corresponding $\mathcal{BT}_n$:
+```{r}
+trees = list()
+all.sackin.index = list()
+real.var.sackin = c(0,0)
+for(n in 3:8){
+  trees[[n]] = read.tree(file = paste("bintrees_n",n,".txt",
+                                        sep = ""))
+  all.sackin.index[[n]] = sapply(trees[[n]],sackin.index)
+  real.var.sackin[n] = var.n(all.sackin.index[[n]])
+  print(paste("var(S_",n,") = ",real.var.sackin[n],sep = ""))
+}
+real.var.sackin
+```
+
+
+The results agree with those given by our formula:
+```{r}
+VarSU=function(n){
+n*(10*n^2-3*n-1)/3-choose(n+1,2)*DF(n)-n^2*DF(n)^2}
+sapply(1:8,FUN=VarSU)
+```
+
+# Exact computation of $\sigma^2_U(\Phi_n)$ for n=3,...,8
+
+We compute the value of each $\sigma_U(\Phi_n)$, for $n=3,\ldots,8$, as the (true) variance of the total  cophenetic indices of all trees in the corresponding $\mathcal{BT}_n$:
+ 
+```{r}
+trees = list()
+all.cophen.index = list()
+real.var.Phi = c(0,0)
+for(n in 3:8){
+  trees[[n]] = read.tree(file = paste("bintrees_n",n,".txt",
+                                        sep = ""))
+  all.cophen.index[[n]] = sapply(trees[[n]],cophen.index)
+  real.var.Phi[n] = var.n(all.cophen.index[[n]])
+  print(paste("var(Phi",n,") = ",real.var.Phi[n],sep = ""))
+}
+real.var.Phi
+```
+
+The results agree with those given by our formula:
+```{r}
+VarPhiU=function(n){
+choose(n,2)*(2*n-1)*(7*n^2-3*n-2)/30-choose(n,2)*(5*n^2-n-2)/32*DF(n)-(1/4)*choose(n,2)^2*DF(n)^2
+}
+sapply(1:8,FUN=VarPhiU)
+```
+
+
+
+
+
+## Exact computation of $Cov_U(S_n,\Phi_n)$ n=3,...,8
+
+
+We compute the value of each $Cov_U(S_n,\Phi_n)$, for $n=3,\ldots,8$, as the covariance the Sackin indices and the total cophenetic indices of all trees in the corresponding $\mathcal{BT}_n$:
+```{r}
+covariancesU = function(n){
+  len = length(all.sackin.index[[n]])
+  value = cov(all.sackin.index[[n]],all.cophen.index[[n]]*(len-1)/len)
+  return(value)
+}
+real.cov.values = c(0,0,sapply(3:8,covariancesU))
+real.cov.values
+```
+
+The results agree with those given by our formula:
+```{r}
+CovSPhiU=function(n){
+(26*n^2-5*n-4)/15*choose(n,2) -(3*n+2)/8*choose(n,2)*DF(n)-(n/2)*choose(n,2)*DF(n)^2
+}
+sapply(1:8,FUN=CovSPhiU)
+```
+
+
+
