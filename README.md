@@ -29,4 +29,4 @@ It contains the types of trees with minimum V value for n from 2^8^ to 2^20^. Ea
 
 ### Table 3 folder
 
-It contains the R Markdown file and the files used in the computations yielding Table 3 in the main text
+It contains the R Markdown file, and the data files generated and used by it, used in the computations yielding Table 3 in the main text
